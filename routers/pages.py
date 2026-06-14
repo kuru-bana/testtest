@@ -6,10 +6,12 @@ from starlette.responses import RedirectResponse
 
 import core
 from core import templates
+from routers.static import VERSION as CURRENT_VERSION
 
 HARDCODED_PASSWORD = "choco"
 AUTH_COOKIE_NAME = "choco_auth"
 AUTH_COOKIE_VALUE = "choco_session_ok"
+WELCOME_COOKIE_NAME = "choco_welcome_seen"
 
 router = APIRouter()
 
@@ -103,6 +105,22 @@ async def links_page(request: Request):
     return templates.TemplateResponse(request, "links.html")
 
 
+@router.get("/about")
+async def about_page(request: Request):
+    is_first_visit = not request.cookies.get(WELCOME_COOKIE_NAME)
+    resp = templates.TemplateResponse(
+        request, "about.html",
+        {"active": "about", "current_version": CURRENT_VERSION, "is_first_visit": is_first_visit},
+    )
+    resp.set_cookie(WELCOME_COOKIE_NAME, "1", httponly=True, samesite="lax", max_age=86400 * 365)
+    return resp
+
+
+@router.get("/contact")
+async def contact_page(request: Request):
+    return templates.TemplateResponse(request, "contact.html", {"active": "contact"})
+
+
 @router.get("/login")
 async def login_page(request: Request):
     return templates.TemplateResponse(request, "login.html")
@@ -126,7 +144,9 @@ async def api_quiz_login(request: Request):
     if score < 3:
         return JSONResponse({"ok": False, "message": "正解数が足りません"}, status_code=401)
 
-    response = JSONResponse({"ok": True, "redirect": "/"})
+    seen_welcome = request.cookies.get(WELCOME_COOKIE_NAME)
+    redirect_url = "/" if seen_welcome else "/about"
+    response = JSONResponse({"ok": True, "redirect": redirect_url})
     response.set_cookie(
         AUTH_COOKIE_NAME,
         AUTH_COOKIE_VALUE,
@@ -149,7 +169,9 @@ async def api_login(request: Request):
     if password and password != HARDCODED_PASSWORD:
         return JSONResponse({"ok": False, "message": "パスワードが正しくありません"}, status_code=401)
 
-    response = JSONResponse({"ok": True, "redirect": "/"})
+    seen_welcome = request.cookies.get(WELCOME_COOKIE_NAME)
+    redirect_url = "/" if seen_welcome else "/about"
+    response = JSONResponse({"ok": True, "redirect": redirect_url})
     response.set_cookie(
         AUTH_COOKIE_NAME,
         AUTH_COOKIE_VALUE,
