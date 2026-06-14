@@ -9,6 +9,8 @@ from core import get_client
 
 router = APIRouter()
 
+VERSION = "1.42"
+
 
 @router.get("/whats")
 async def whats():
@@ -17,7 +19,7 @@ async def whats():
 
 @router.get("/version")
 async def version():
-    return {"ver": "1.41"}
+    return {"ver": VERSION}
 
 
 # ── Link list status ──────────────────────────────────────────────────────────
